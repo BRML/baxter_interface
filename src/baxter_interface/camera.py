@@ -59,7 +59,7 @@ class CameraController(object):
     # Valid for exposure, gain and white balance.
     CONTROL_AUTO = -1
 
-    def __init__(self, name):
+    def __init__(self, name, sim=False):
         """
         Constructor.
 
@@ -70,18 +70,22 @@ class CameraController(object):
                      and head_camera.  However if the cameras are not
                      identified via the parameter server, they are simply
                      indexed starting at 0.
+        @param sim: whether in simulation mode (True) or on real baxter
+                    robot (False, default).
         """
         self._id = name
+        self._sim = sim
 
-        list_svc = rospy.ServiceProxy('/cameras/list', ListCameras)
-        rospy.wait_for_service('/cameras/list', timeout=10)
-        if not self._id in list_svc().cameras:
-            raise AttributeError(
-                ("Cannot locate a service for camera name '{0}'. "
-                "Close a different camera first and try again.".format(self._id)))
+        if not self._sim:
+            list_svc = rospy.ServiceProxy('/cameras/list', ListCameras)
+            rospy.wait_for_service('/cameras/list', timeout=10)
+            if self._id not in list_svc().cameras:
+                raise AttributeError(
+                    ("Cannot locate a service for camera name '{0}'. "
+                     "Close a different camera first and try again.".format(self._id)))
 
-        self._open_svc = rospy.ServiceProxy('/cameras/open', OpenCamera)
-        self._close_svc = rospy.ServiceProxy('/cameras/close', CloseCamera)
+            self._open_svc = rospy.ServiceProxy('/cameras/open', OpenCamera)
+            self._close_svc = rospy.ServiceProxy('/cameras/close', CloseCamera)
 
         self._settings = CameraSettings()
         self._settings.width = 320
@@ -334,16 +338,18 @@ class CameraController(object):
         if self._id == 'head_camera':
             self._set_control_value(CameraControl.CAMERA_CONTROL_FLIP, True)
             self._set_control_value(CameraControl.CAMERA_CONTROL_MIRROR, True)
-        ret = self._open_svc(self._id, self._settings)
-        if ret.err != 0:
-            raise OSError(ret.err, "Failed to open camera")
+        if not self._sim:
+            ret = self._open_svc(self._id, self._settings)
+            if ret.err != 0:
+                raise OSError(ret.err, "Failed to open camera")
         self._open = True
 
     def close(self):
         """
         Close, if necessary the camera.
         """
-        ret = self._close_svc(self._id)
-        if ret.err != 0 and ret.err != errno.EINVAL:
-            raise OSError(ret.err, "Failed to close camera")
+        if not self._sim:
+            ret = self._close_svc(self._id)
+            if ret.err != 0 and ret.err != errno.EINVAL:
+                raise OSError(ret.err, "Failed to close camera")
         self._open = False
