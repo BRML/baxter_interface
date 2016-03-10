@@ -116,7 +116,7 @@ class CameraController(object):
         Camera resolution as a tuple.  (width, height).  Valid resolutions are
         listed as tuples in CameraController.MODES
         """
-        return (self._settings.width, self._settings.height)
+        return self._settings.width, self._settings.height
 
     @resolution.setter
     def resolution(self, res):
@@ -124,7 +124,7 @@ class CameraController(object):
         if len(res) != 2:
             raise AttributeError("Invalid resolution specified")
 
-        if not res in self.MODES:
+        if res not in self.MODES:
             raise ValueError("Invalid camera mode %dx%d" % (res[0], res[1]))
 
         self._settings.width = res[0]
@@ -258,10 +258,10 @@ class CameraController(object):
         """
         x = self._get_value(CameraControl.CAMERA_CONTROL_WINDOW_X,
                             self.CONTROL_AUTO)
-        if (x == self.CONTROL_AUTO):
+        if x == self.CONTROL_AUTO:
             return (tuple(map(lambda x: x / 2, self.resolution)) if
-            self.half_resolution else
-            self.resolution)
+                    self.half_resolution else
+                    self.resolution)
         else:
             return (x, self._get_value(CameraControl.CAMERA_CONTROL_WINDOW_Y,
                                        self.CONTROL_AUTO))
